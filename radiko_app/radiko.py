@@ -220,10 +220,11 @@ class Radiko():
                             yield out
                 finally:
                     self.logger.info('stop playing {}'.format(station))
-                    pgid = os.getpgid(proc.pid)
-                    self.logger.debug('killing process group {}'.format(pgid))
-                    os.killpg(pgid, signal.SIGTERM)
-                    proc.wait()
+                    if not proc.poll():
+                        pgid = os.getpgid(proc.pid)
+                        self.logger.debug('killing process group {}'.format(pgid))
+                        os.killpg(pgid, signal.SIGTERM)
+                        proc.wait()
         else:
             self.logger.error('{} not in available stations'.format(station))
             
