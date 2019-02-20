@@ -6,9 +6,10 @@ import signal
 import base64
 import json
 from collections import OrderedDict
-
+from datetime import datetime, timedelta
 from http.cookiejar import FileCookieJar
 import xml.etree.ElementTree as ET
+import xmltodict
 
 import logging
 
@@ -19,6 +20,8 @@ class Radiko():
     LOGOUT_URL="https://radiko.jp/ap/member/webapi/member/logout"
     CHANNEL_AREA_URL="http://radiko.jp/v3/station/list/{}.xml"
     CHANNEL_FULL_URL="http://radiko.jp/v3/station/region/full.xml"
+    PROG_NOW_URL = "http://radiko.jp/v3/program/now/{}.xml"
+    PROG_TIMEFREE_URL = "http://radiko.jp/v3/program/date/{}/{}.xml"
     AUTH1_URL="https://radiko.jp/v2/api/auth1"
     AUTH2_URL="https://radiko.jp/v2/api/auth2"
     AUTH_KEY = "bcd151073c03b352e1ef2fd66c32209da9ca0afa"
@@ -317,6 +320,14 @@ class Radiko():
                 station_str = '{} / {}'.format(area_name.capitalize(), name)
                 f.write('#EXTINF:-1,{}\n'.format(station_str))
                 f.write(url.format(station_id)+'\n')
+
+    def get_program(self, date_str, region_id):
+        res = urllib.request.urlopen(
+            Radiko.PROG_TIMEFREE_URL.format(date_str, region_id)
+        )
+        program = xmltodict(res.read())
+        return program
+
 
     def __del__(self):
         Radiko.inst_ctr -= 1
