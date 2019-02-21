@@ -269,9 +269,7 @@ class Radiko():
                 data['stations'].append(current_station)
             station_data.append(data)
         Radiko.station_data = station_data
-        l = [[s['area_id'] for s in region['stations']] 
-            for region in station_data]
-        areas = [item for sublist in l for item in sublist]
+        areas = ['JP{}'.format(i+1) for i in range(47)]
         for area_id in areas:
             if area_id == Radiko.area or area_id not in Radiko.area_data:
                 res = urllib.request.urlopen(
