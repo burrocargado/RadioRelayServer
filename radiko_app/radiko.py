@@ -11,6 +11,11 @@ from http.cookiejar import FileCookieJar
 import xml.etree.ElementTree as ET
 import xmltodict
 
+try:
+    from . import radiko_auth_test as ra
+except:
+    from . import radiko_auth as ra
+
 import logging
 
 class Radiko():
@@ -22,12 +27,10 @@ class Radiko():
     CHANNEL_FULL_URL="http://radiko.jp/v3/station/region/full.xml"
     PROG_NOW_URL = "http://radiko.jp/v3/program/now/{}.xml"
     PROG_TIMEFREE_URL = "http://radiko.jp/v3/program/date/{}/{}.xml"
-    AUTH1_URL="https://radiko.jp/v2/api/auth1"
-    AUTH2_URL="https://radiko.jp/v2/api/auth2"
-    AUTH_KEY = "bcd151073c03b352e1ef2fd66c32209da9ca0afa"
     area_data = {}
     station_data = None
     stations = None
+    token = None
     area = None
     inst_ctr = 0
     opener = None
@@ -39,24 +42,29 @@ class Radiko():
         default_logger.addHandler(logging.NullHandler)
         self.logger = logger or default_logger
         self.logger.debug('Radiko constructor: {}'.format(Radiko.inst_ctr))
-        if acct:
-            if Radiko.opener:
-                opener = Radiko.opener
-                login_state = self.check_login(opener)
-            if not Radiko.opener or not login_state:
-                opener, cj = self.login(acct)
-                login_state = self.check_login(opener)
-                if login_state:
-                    Radiko.opener = opener
-            self.login_state = login_state
+        self.login_state = False
+        if Radiko.opener:
+            opener = Radiko.opener
+            if acct:
+                self.login_state = self.check_login(opener)
+                if not self.login_state:
+                    self.login(acct, opener)
+                    self.login_state = self.check_login(opener)
+
         else:
-            self.login_state = None
-        if self.login_state:
-            self.opener = opener
+            cj = FileCookieJar()
+            opener = urllib.request.build_opener(
+                urllib.request.HTTPCookieProcessor(cj)
+            )
+            Radiko.opener = opener
             urllib.request.install_opener(opener)
-        else:
-            self.opener = None
+            if acct:
+                self.login(acct, opener)
+                self.login_state = self.check_login(opener)
+
         if force_get_stations or not Radiko.area:
+            Radiko.token = None
+            Radiko.area = None
             token, area_id = self.get_token()
             Radiko.token = token
             Radiko.area = area_id
@@ -67,27 +75,19 @@ class Radiko():
                     playlist['url'],
                     playlist['file']
                 )
-            
+
     def get_token(self):
-        res = self.auth1()
-        partialkey, token = self.get_partial_key(res)
-        txt = self.auth2(partialkey, token)
-        self.logger.debug(txt.strip())
-        area_id, area_name, area_name_ascii = txt.strip().split(',')
-        return token, area_id
         
-    def login(self, acct):
-        cj = FileCookieJar()
-        opener = urllib.request.build_opener(
-            urllib.request.HTTPCookieProcessor(cj)
-        )
+        return ra.get_token(rdk=self, logger=self.logger)
+
+    def login(self, acct, opener):
         post = {
             'mail': acct['mail'],
             'pass': acct['pass']
         }
         data = urllib.parse.urlencode(post).encode('utf-8')
         res = opener.open(Radiko.LOGIN_URL, data)
-        return  opener, cj
+        self.logger.debug('premium login tried')
 
     def check_login(self, opener):
         if not opener:
@@ -105,7 +105,7 @@ class Radiko():
                 return None
             else:
                 raise e
-                
+
     def logout(self):
         if self.login_state:
             logout = self.opener.open(Radiko.LOGOUT_URL)
@@ -113,54 +113,6 @@ class Radiko():
             self.login_state = None
             self.logger.info('premium logout')
             return json.loads(txt.decode())
-
-    def auth1(self):
-        auth_response = {}
-
-        headers = {
-                "User-Agent": "curl/7.56.1",
-                "Accept": "*/*",
-                "X-Radiko-App":"pc_html5" ,
-                "X-Radiko-App-Version":"0.0.1" ,
-                "X-Radiko-User":"dummy_user" ,
-                "X-Radiko-Device":"pc" ,
-        }
-        req  = urllib.request.Request( Radiko.AUTH1_URL, None, headers  )
-        res  = urllib.request.urlopen(req)
-        auth_response["body"] = res.read()
-        auth_response["headers"] = res.info()
-
-        return auth_response
-
-
-    def get_partial_key(self, auth_response):
-
-        authtoken = auth_response["headers"]["x-radiko-authtoken"]
-        offset    = auth_response["headers"]["x-radiko-keyoffset"]
-        length    = auth_response["headers"]["x-radiko-keylength"]
-
-        offset = int(offset)
-        length = int(length)
-        partialkey= Radiko.AUTH_KEY[offset:offset+length]
-        partialkey = base64.b64encode(partialkey.encode())
-
-        return partialkey, authtoken
-
-
-    def auth2(self, partialkey, auth_token) :
-
-        headers =  {
-            "X-Radiko-AuthToken": auth_token,
-            "X-Radiko-Partialkey": partialkey,
-            "X-Radiko-User": "dummy_user",
-            "X-Radiko-Device": 'pc'
-        }
-
-        req  = urllib.request.Request(Radiko.AUTH2_URL, None, headers)
-        res  = urllib.request.urlopen(req)
-        text = res.read().decode()
-
-        return text
 
     def gen_temp_chunk_m3u8_url(self, url, auth_token):
 
@@ -180,10 +132,10 @@ class Radiko():
         lines = re.findall('^https?://.+m3u8$', body, flags=(re.MULTILINE))
 
         return lines[0]
-    
 
     def play(self, station):
         self.logger.info('playing {}'.format(station))
+        self.current_station = station
         if station in self.stations:
             url = (
                 'http://f-radiko.smartstream.ne.jp/' 
@@ -191,12 +143,13 @@ class Radiko():
                 '/_definst_/simul-stream.stream/playlist.m3u8'
             )
             for ctr in range(2):
-                m3u8 = self.gen_temp_chunk_m3u8_url(url, Radiko.token)
+                token, area_id = self.get_token()
+                m3u8 = self.gen_temp_chunk_m3u8_url(url, token)
                 if m3u8:
+                    Radiko.token = token
                     break
                 self.logger.info('getting new token')
-                token, area_id = self.get_token()
-                Radiko.token = token
+                Radiko.token = None
             if not m3u8:
                 self.logger.error('gen_temp_chunk_m3u8_url fail')
             else:
@@ -210,7 +163,6 @@ class Radiko():
                 )
                 self.logger.debug('started subprocess: group id {}'
                     .format(os.getpgid(proc.pid)))
-
                 try:
                     while True:
                         out = proc.stdout.read(512)
@@ -230,7 +182,7 @@ class Radiko():
                         proc.wait()
         else:
             self.logger.error('{} not in available stations'.format(station))
-            
+
     def download(self, station, ft, to):
         url = (
             'https://radiko.jp/v2/api/ts/playlist.m3u8?station_id=' 
@@ -249,7 +201,7 @@ class Radiko():
             stderr=subprocess.STDOUT, preexec_fn=os.setsid
         )
         proc.wait()
-    
+
     def get_stations(self):
         res = urllib.request.urlopen(Radiko.CHANNEL_FULL_URL)
         xml_string = res.read()
@@ -304,7 +256,7 @@ class Radiko():
                         name, region_name, area_id, area_name
                     )
         Radiko.stations = stations
-    
+
     def gen_playlist(self, url_template, outfile):
         self.logger.info('writing playlist: {}'.format(outfile))
         with open(outfile, 'w') as f:
@@ -325,7 +277,6 @@ class Radiko():
         )
         program = xmltodict(res.read())
         return program
-
 
     def __del__(self):
         Radiko.inst_ctr -= 1

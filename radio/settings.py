@@ -152,7 +152,7 @@ LOGGING = {
     'loggers': {
         'radio.debug': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'DEBUG',
         },
     },
 }
