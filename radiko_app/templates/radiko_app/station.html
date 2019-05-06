@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block body %}
+  
+    <table border="1" style="table-layout:fixed; width:560px;">
+      <thead>
+        <tr>
+          <th style="width:20px;">No</th>
+          <th style="width:70px;">Region</th>
+          <th style="width:70px;">Area</th>
+          <th style="width:120px;">Station</th>
+          <th style="width:80px;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for station in stations %}
+          <tr>
+            <td>{{ station.station_no }}</td>
+            <td>{{ station.region }}</td>
+            <td>{{ station.area_name }}</td>
+            <td><a href="/radiko/program/{{ station.station_id }}#now">{{ station.name }}</a></td>
+            <td align="center">
+            <form name="f1" id="f1" method="post" action="" target="control">
+            {% csrf_token %}
+            <input type="hidden" name="station_id" value="{{ station.station_id }}">
+            <input type="submit" name="play" value="MPD">
+            <input type="submit" name="stream" value="Stream">
+            </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  <IFRAME NAME="control" id="control" width="560" height="200"></IFRAME>
+{% endblock %}
+

@@ -2,11 +2,11 @@ import urllib.request
 import base64
 from . import radiko
 
-def get_token(rdk=None, logger=None):
+def get_token(trial=0, rdk=None, logger=None):
 
     token = radiko.Radiko.token
     area = radiko.Radiko.area
-    if token and area:
+    if not trial and token and area:
         return token, area
     
     AUTH1_URL="https://radiko.jp/v2/api/auth1"
@@ -69,6 +69,8 @@ def get_token(rdk=None, logger=None):
     partialkey, token = get_partial_key(res)
     txt = auth2(partialkey, token)
     area_id, area_name, area_name_ascii = txt.strip().split(',')
+    radiko.Radiko.token = token
+    radiko.Radiko.area = area_id
 
     return token, area_id
 

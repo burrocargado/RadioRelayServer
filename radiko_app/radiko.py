@@ -27,6 +27,19 @@ class Radiko():
     CHANNEL_FULL_URL="http://radiko.jp/v3/station/region/full.xml"
     PROG_NOW_URL = "http://radiko.jp/v3/program/now/{}.xml"
     PROG_TIMEFREE_URL = "http://radiko.jp/v3/program/date/{}/{}.xml"
+    PROG_WEEKLY_URL = "http://radiko.jp/v3/program/station/weekly/{}.xml"
+    LIVE_URL = (
+        'http://f-radiko.smartstream.ne.jp/{}' 
+        '/_definst_/simul-stream.stream/playlist.m3u8'
+    )
+    FFMPEG = 'ffmpeg'
+    TIMEFREE_URL = (
+        'https://radiko.jp/v2/api/ts/playlist.m3u8'
+        '?station_id={0}'
+        '&start_at={1}&ft={1}&end_at={2}&to={2}'#&seek={3}'
+        '&l=15'
+        '&type=b'
+    )
     area_data = {}
     station_data = None
     stations = None
@@ -63,11 +76,7 @@ class Radiko():
                 self.login_state = self.check_login(opener)
 
         if force_get_stations or not Radiko.area:
-            Radiko.token = None
-            Radiko.area = None
-            token, area_id = self.get_token()
-            Radiko.token = token
-            Radiko.area = area_id
+            token, area_id = self.get_token(trial=0)
             self.logger.info('getting stations')
             self.get_stations()
             if playlist:
@@ -76,9 +85,9 @@ class Radiko():
                     playlist['file']
                 )
 
-    def get_token(self):
+    def get_token(self, trial=0):
         
-        return ra.get_token(rdk=self, logger=self.logger)
+        return ra.get_token(trial=trial, rdk=self, logger=self.logger)
 
     def login(self, acct, opener):
         post = {
@@ -97,6 +106,7 @@ class Radiko():
             check = opener.open(Radiko.CHECK_URL)
             txt = check.read()
             self.logger.info('premium logged in')
+            self.logger.debug(txt.decode())
             return json.loads(txt.decode())
         except urllib.request.HTTPError as e:
             self.logger.debug(e)
@@ -118,6 +128,8 @@ class Radiko():
 
         headers =  {
           "X-Radiko-AuthToken": auth_token,
+          "Origin": "http://radiko.jp",
+          "Referer": "http://radiko.jp/",
         }
         req  = urllib.request.Request(url, None, headers)
         try:
@@ -133,39 +145,63 @@ class Radiko():
 
         return lines[0]
 
-    def play(self, station):
+    def play(self, station, timefree={}):
         self.logger.info('playing {}'.format(station))
         self.current_station = station
         if station in self.stations:
-            url = (
-                'http://f-radiko.smartstream.ne.jp/' 
-                + station + 
-                '/_definst_/simul-stream.stream/playlist.m3u8'
-            )
+            if timefree:
+                ft = timefree['ft']
+                to = timefree['to']
+                if 'seek' not in timefree:
+                    seek_str = ft
+                    seek_opt = ''
+                    url = Radiko.TIMEFREE_URL.format(
+                        station, ft, to
+                    )
+                else:
+                    seek = int(timefree['seek'])
+                    t1 = datetime.strptime(ft, '%Y%m%d%H%M%S')
+                    t2 = t1 + timedelta(seconds=seek)
+                    seek_str = t2.strftime('%Y%m%d%H%M%S')
+                    #t0 = datetime.strptime('00:00:00', '%H:%M:%S')
+                    #seek_ffmpeg = (
+                    #    t0 + timedelta(seconds=seek)
+                    #).strftime('%H:%M:%S')
+                    #seek_opt = '-ss {} '.format(seek_ffmpeg)
+                    url = Radiko.TIMEFREE_URL.format(
+                        station, seek_str, to
+                    )
+            else:
+                url = Radiko.LIVE_URL.format(station)
+                seek_opt = ''
+            self.logger.debug('getting: ' + url)
             for ctr in range(2):
-                token, area_id = self.get_token()
+                token, area_id = self.get_token(trial=ctr)
                 m3u8 = self.gen_temp_chunk_m3u8_url(url, token)
                 if m3u8:
-                    Radiko.token = token
+                    self.logger.info(m3u8)
                     break
                 self.logger.info('getting new token')
-                Radiko.token = None
             if not m3u8:
                 self.logger.error('gen_temp_chunk_m3u8_url fail')
             else:
                 cmd = (
-                    "ffmpeg -y -headers 'X-Radiko-Authtoken:{}' -i '{}' "
-                    "-acodec copy -f adts -loglevel error /dev/stdout"
-                ).format(Radiko.token, m3u8)
+                    "{0} -y "
+                    "-fflags +discardcorrupt "
+                    "-i '{1}' "
+                    "-codec:a copy -f adts -loglevel error -"
+                ).format(Radiko.FFMPEG, m3u8)
+                
+                self.logger.debug('cmd: ' + cmd)
                 proc = subprocess.Popen(
                     cmd, shell=True, stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT, preexec_fn=os.setsid
+                    preexec_fn=os.setsid
                 )
                 self.logger.debug('started subprocess: group id {}'
                     .format(os.getpgid(proc.pid)))
                 try:
                     while True:
-                        out = proc.stdout.read(512)
+                        out = proc.stdout.read(1024)
                         if proc.poll() is not None:
                             self.logger.error(
                                 'subprocess died: {}'.format(station)
@@ -177,36 +213,59 @@ class Radiko():
                     self.logger.info('stop playing {}'.format(station))
                     if not proc.poll():
                         pgid = os.getpgid(proc.pid)
-                        self.logger.debug('killing process group {}'.format(pgid))
+                        self.logger.debug(
+                            'killing process group {}'.format(pgid)
+                        )
                         os.killpg(pgid, signal.SIGTERM)
                         proc.wait()
         else:
             self.logger.error('{} not in available stations'.format(station))
 
-    def download(self, station, ft, to):
-        url = (
-            'https://radiko.jp/v2/api/ts/playlist.m3u8?station_id=' 
-            + station + 
-            '&l=15&ft=' + ft + '&to=' + to
-        )
-        outfile = "{}_{}_{}.mp4".format(station, ft, to)
-        token, area_id = self.get_token()
-        m3u8 = self.gen_temp_chunk_m3u8_url(url, token)
-        cmd = (
-            "ffmpeg -headers 'X-Radiko-Authtoken:{}' -i '{}' "
-            "-acodec copy -bsf:a aac_adtstoasc -loglevel error {}"
-        ).format(Radiko.token, m3u8, outfile)
-        proc = subprocess.Popen(
-            cmd, shell=True, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, preexec_fn=os.setsid
-        )
-        proc.wait()
+    def download(self, station, outfile, timefree={}, liverec={}):
+        self.logger.info('downloading {}'.format(station))
+        self.current_station = station
+        if timefree:
+            ft = timefree['ft']
+            to = timefree['to']
+            url = Radiko.TIMEFREE_URL.format(
+                station, ft, to
+            )
+        elif liverec:
+            url = Radiko.LIVE_URL.format(station)
+        else:
+            return
+        for ctr in range(2):
+            token, area_id = self.get_token(trial=ctr)
+            m3u8 = self.gen_temp_chunk_m3u8_url(url, token)
+            if m3u8:
+                break
+            self.logger.info('getting new token')
+        if not m3u8:
+            self.logger.error('gen_temp_chunk_m3u8_url fail')
+        else:
+            if timefree:
+                cmd = (
+                    "{0} -i '{1}' "
+                    "-acodec copy -bsf:a aac_adtstoasc -loglevel error {2}"
+                ).format(Radiko.FFMPEG, m3u8, outfile)
+            elif liverec:
+                cmd = (
+                    "({0} -i '{1}' "
+                    "-acodec copy -bsf:a aac_adtstoasc -loglevel error {2}) "
+                    "& sleep {3} ; ps $! > /dev/null 2>&1 && kill $!"
+                ).format(Radiko.FFMPEG, m3u8, outfile, liverec['duration'])
+            proc = subprocess.Popen(
+                cmd, shell=True, stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, preexec_fn=os.setsid
+            )
+            proc.wait()
 
     def get_stations(self):
         res = urllib.request.urlopen(Radiko.CHANNEL_FULL_URL)
         xml_string = res.read()
         root = ET.fromstring(xml_string)
         station_data = []
+        token_, area_id_ = self.get_token()
         for region in root:
             data = {}
             data['region'] = region.attrib
@@ -223,7 +282,7 @@ class Radiko():
         Radiko.station_data = station_data
         areas = ['JP{}'.format(i+1) for i in range(47)]
         for area_id in areas:
-            if area_id == Radiko.area or area_id not in Radiko.area_data:
+            if area_id == area_id_ or area_id not in Radiko.area_data:
                 res = urllib.request.urlopen(
                     Radiko.CHANNEL_AREA_URL.format(area_id))
                 xml_string = res.read()
@@ -251,7 +310,7 @@ class Radiko():
                 )
                 name = s['name']
                 if (self.login_state or 
-                    station_id in Radiko.area_data[Radiko.area]['stations']):
+                    station_id in Radiko.area_data[area_id_]['stations']):
                     stations[station_id] = (
                         name, region_name, area_id, area_name
                     )
@@ -270,12 +329,23 @@ class Radiko():
                 station_str = '{} / {}'.format(area_name.capitalize(), name)
                 f.write('#EXTINF:-1,{}\n'.format(station_str))
                 f.write(url.format(station_id)+'\n')
-
+    
     def get_program(self, date_str, region_id):
         res = urllib.request.urlopen(
             Radiko.PROG_TIMEFREE_URL.format(date_str, region_id)
         )
-        program = xmltodict(res.read())
+        program = xmltodict.parse(res.read())
+        return program
+    
+    def get_program_w(self, station):
+        try:
+            res = urllib.request.urlopen(
+                Radiko.PROG_WEEKLY_URL.format(station)
+            )
+        except:
+            self.logger.error('Error getting program: {}'.format(station))
+            return {}
+        program = xmltodict.parse(res.read())
         return program
 
     def __del__(self):
@@ -283,5 +353,6 @@ class Radiko():
         self.logger.debug('Radiko destructor: {}'.format(Radiko.inst_ctr))
         if Radiko.inst_ctr == 0:
             ret = self.logout()
-            self.logger.debug(ret)
+            if ret:
+                self.logger.debug(ret)
 

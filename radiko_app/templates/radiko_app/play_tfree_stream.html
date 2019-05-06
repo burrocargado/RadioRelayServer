@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block body %}
+  {{ play.from }}<br>
+  {{ play.title }}<br><br>
+  <form name="seek" id="seek" method="post" action="">
+    {% csrf_token %}
+    <input type="hidden" name="id" value="{{ play.id }}">
+    <input type="hidden" name="station_id" value="{{ play.station_id }}">
+    <input type="hidden" name="ft" value="{{ play.ft }}">
+    <input type="hidden" name="to" value="{{ play.to }}">
+    <input type="hidden" name="dur" value="{{ play.dur }}">
+    <input type="hidden" name="title" value="{{ play.title }}">
+    <input type="hidden" name="from" value="{{ play.from }}">
+    <input type="submit" name="stream" value="Seek">
+    <input type="range" id="seek-range" name="seek" value="{{ play.seek }}" step="1" min="0" max="{{ play.dur }}"/>
+      <span id="value">{{ play.seek }}</span>
+  <script>
+    var elem = document.getElementById('seek-range');
+    var target = document.getElementById('value');
+    var rangeValue = function (elem, target) {
+      return function(evt){
+        target.innerHTML = elem.value;
+      }
+    }
+    elem.addEventListener('input', rangeValue(elem, target));
+  </script>
+  </form>
+  <br>
+  <audio id="audio" src="{% url 'tune' station_id=play.station_id %}?ft={{ play.ft }}&to={{ play.to }}&seek={{ play.seek }}" preload="metadata" autoplay>
+  </audio>
+<div>
+<input type="button" value="Play" onClick="playAudio()">
+<input type="button" value="Pause" onClick="pauseAudio()">
+<input type="button" value="Vol.UP" onClick="upVolume()">
+<input type="button" value="Vol.DN" onClick="downVolume()"><br>
+Current Pos.(sec)：<span id="position">0</span><br>
+Total Length（sec）：<span id="duration">{{ play.dur }}</span><br>
+<span id="status"></span>
+</div>
+<script type="text/javascript">
+var v = document.getElementById("audio");
+playAudio();
+
+function playAudio() {
+	v.play();
+	v.addEventListener("timeupdate", function(){
+		document.getElementById("position").innerHTML = (Number({{ play.seek }}) + v.currentTime).toFixed(1);
+	}, false);
+}
+
+function pauseAudio() {
+	v.pause();
+}
+
+function upVolume() {
+	v.volume = v.volume + 0.1;
+}
+
+function downVolume() {
+	v.volume = v.volume - 0.1;
+}
+</script>
+
+{% endblock %}
+

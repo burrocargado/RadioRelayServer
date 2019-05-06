@@ -7,51 +7,54 @@ RadioRelayServer
 * Music Player Daemon (MPD)でラジコを聞くための中継サーバです。
 * ラジコで聞くことができる放送局の一覧をプレイリストとして自動生成します。
   MPDでこれを読み込んで選局します。
+  また、WEBインターフェースから選局、番組表からダウンロードや予約録音できます。
 * 放送局の切り替えは1秒程度、そこそこ快適にチャンネルザッピングできると思います。
-* NanoPi-NEO(Ubuntu 16.04.5 LTS)で動作確認しています。
+* NanoPi-NEO2(Ubuntu 16.04.4 LTS)で動作確認しています。
  
 Requirement
 ===========
  
 :Python: 3.5.2
-:Django: 2.1.5
-:ffmpeg: 2.8.14
- 
+:Django: 2.2
+:xmltodict: 0.12.0
+:django-background-tasks: 1.2.0
+:ffmpeg: 4.1
  
 Quick start
 ===========
 1. プロジェクトのクローン::
  
     git clone https://github.com/burrocargado/RadioRelayServer
+    cd RadioRelayServer
+    git checkout develop
  
-2. モデルのmigrate::
+2. モデルのマイグレーション::
  
-    モデルは使っていませんが、
+    python manage.py makemigrations
     python manage.py migrate
  
 3. 設定::
     
     MPDは別途用意してください。
-    ffmpegを使いますのでPathを通しておいてください。
-    settings/config.pyにプレイリストファイルとストリーミングURLを設定。
-    ラジコプレミアムのアカウントがあれば、settings/account.pyに設定。
+    ffmpegをプロジェクトのディレクトリに置いてください。
+    radio/local_settings.pyを作成。
+    詳細はlocal_settings_sample.py参照、
+    SECRET_KEYはgenerate_secretkey_setting.pyを用いて生成、
+    ALLOWED_HOSTSにDjangoを実行するホストのIPアドレスを追加。
  
 4. 起動::
     
-    python manage.py runserver 0.0.0.0:9000
-    
-    上記設定のストリーミングURLに対応させてください。
-    
-    Error: You don't have permission to access that port.
-    これが表示される場合
-    
-    sudo touch /var/lib/mpd/playlists/00_radiko.m3u
-    sudo chmod 666 /var/lib/mpd/playlists/00_radiko.m3u
-    
-    とでもしてくささい。
- 
+    python manage.py runserver 0.0.0.0:9000　（サーバー本体）
+    python manage.py process_tasks --queue update-program （番組表更新タスク）
+    python manage.py process_tasks --queue downoad （タイムフリーダウンロード用タスク）
+    python manage.py process_tasks --queue timer_rec （予約録音用タスク）
+     
 5. 使い方::
 　　　　
     お使いのMPDクライアントから上記のプレイリスト（設定を変えていなければ00_radiko.m3u）
     を読み込んで選局してください。
+    
+    Webインターフェース
+    http://xxx.xxx.xxx.xxx:9000/radiko/station
+
 

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block body %}
+  {{ play.name }}<br><br>
+  <audio id="audio" src="{% url 'tune' station_id=play.station_id %}" preload="metadata" autoplay>
+  </audio>
+<div>
+<input type="button" value="Play" onClick="playAudio()">
+<input type="button" value="Pause" onClick="pauseAudio()">
+<input type="button" value="Vol.UP" onClick="upVolume()">
+<input type="button" value="Vol.DN" onClick="downVolume()"><br>
+Playing... <span id="position">0</span><br>
+<span id="status"></span>
+</div>
+<script type="text/javascript">
+var v = document.getElementById("audio");
+playAudio();
+
+function playAudio() {
+	v.play();
+	v.addEventListener("timeupdate", function(){
+		document.getElementById("position").innerHTML = v.currentTime.toFixed(1);
+	}, false);
+}
+
+function pauseAudio() {
+	v.pause();
+}
+
+function upVolume() {
+	v.volume = v.volume + 0.1;
+}
+
+function downVolume() {
+	v.volume = v.volume - 0.1;
+}
+</script>
+
+{% endblock %}
+

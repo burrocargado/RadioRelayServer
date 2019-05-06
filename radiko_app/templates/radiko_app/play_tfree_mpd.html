@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block body %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  Playing on MPD<br><br>
+  {{ play.from }}<br>
+  {{ play.title }}<br><br>
+  <form name="seek" id="seek" method="post" action="">
+    {% csrf_token %}
+    <input type="hidden" name="id" value="{{ play.id }}">
+    <input type="submit" name="play" value="Seek">
+    <input type="range" id="seek-range" name="seek" value="{{ play.seek }}" step="1" min="0" max="{{ play.dur }}"/>
+    <span id="value">{{ play.seek }}</span>
+  </form>
+<br>
+Position(sec): <span id="position">0</span> / <span id="duration">{{ play.dur }}</span><br>
+<script type="text/javascript">
+  var elem = document.getElementById('seek-range');
+  var target = document.getElementById('value');
+  var rangeValue = function (elem, target) {
+    return function(evt){
+      target.innerHTML = elem.value;
+    }
+  }
+  elem.addEventListener('input', rangeValue(elem, target));
+  $(function() {
+    update();
+    check = setInterval("update()",1000);
+  });
+  function update(){
+    $.ajax({
+      url: '{% url 'status' %}',
+      type: 'GET',
+      dataType: 'json',
+      cache : false
+    })
+    .done(function(res) {
+       if(res[0] == "{{play.url | safe}}"){
+        let t = Number({{ play.seek }}) + res[2];
+        document.getElementById("position").innerHTML = t;
+      } else {
+        clearInterval(check);
+      }
+    });
+  }
+</script>
+{% endblock %}
+

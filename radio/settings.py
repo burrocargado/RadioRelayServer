@@ -20,17 +20,19 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'peml&5ldn#p^47$sy3_9jn+e#mg197lm0(5qy+3@!+l@ag$hrv'
+#SECRET_KEY = 'peml&5ldn#p^47$sy3_9jn+e#mg197lm0(5qy+3@!+l@ag$hrv'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.0.35', '127.0.0.1', 'localhost']
+#ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'radiko_app.apps.Radiko_appConfig',
+    'background_task',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,7 +49,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'radio.middleware.SampleMiddleware',
+    'radio.middleware.RadikoMiddleware',
 ]
 
 ROOT_URLCONF = 'radio.urls'
@@ -78,6 +80,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    },
+    'OPTIONS': {
+        'timeout': 60,
     }
 }
 
@@ -156,3 +161,5 @@ LOGGING = {
         },
     },
 }
+
+from .local_settings import *
