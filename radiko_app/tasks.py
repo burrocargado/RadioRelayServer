@@ -36,6 +36,7 @@ def record_program(params):
         act = {'mail':settings.RADIKO_MAIL, 'pass':settings.RADIKO_PASS}
     except:
         act = {}
+    radiko.Radiko.FFMPEG = os.path.join(settings.BASE_DIR, 'ffmpeg')
     rdk = radiko.Radiko(act, logger=logging.getLogger('radio.debug'))
     fbase = '{}_{}_{}_rec'.format(ft, to, station_id)
     path = settings.RADIKO_REC_DIR
@@ -65,6 +66,7 @@ def download_program(p_id):
         act = {'mail':settings.RADIKO_MAIL, 'pass':settings.RADIKO_PASS}
     except:
         act = {}
+    radiko.Radiko.FFMPEG = os.path.join(settings.BASE_DIR, 'ffmpeg')
     rdk = radiko.Radiko(act, logger=logging.getLogger('radio.debug'))
     fbase = '{}_{}_{}'.format(ft, to, station_id)
     path = settings.RADIKO_REC_DIR
