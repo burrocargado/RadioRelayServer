@@ -177,7 +177,7 @@ class ListProgram(View):
                 for dl in dllist:
                     p_id = int(dl)
                     p = Program.objects.get(id=p_id)
-                    logger.debug(p.title, p.ft)
+                    logger.debug((p.title, p.ft))
                     download_program(p_id)
                     p.download = 1
                     p.save()
@@ -193,7 +193,7 @@ class ListProgram(View):
                     ft = p.ft
                     to = p.to
                     dur = p.dur
-                    logger.debug(p.title, p.ft)
+                    logger.debug((p.title, p.ft))
                     pgm_data = serializers.serialize(
                         "json", [p], ensure_ascii=False
                     )
