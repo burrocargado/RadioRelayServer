@@ -15,11 +15,12 @@ from .tasks import download_program, record_program
 from django.core import serializers
 
 from django.conf import settings
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 import logging
 
 def index(request):
-    return HttpResponse("Hello, world. You're at the radiko_app index.")
+    return redirect('station/')
 
 def mpd_play(content):
     logger = logging.getLogger('radio.debug')
@@ -82,7 +83,7 @@ class MPDStatus(View):
             )
         return response
 
-class ListStation(View):
+class ListStation(LoginRequiredMixin, View):
     def get(self, request):
         logger = logging.getLogger('radio.debug')
         logger.debug(request)
@@ -111,7 +112,7 @@ class ListStation(View):
                 }}
                 return render(request, 'radiko_app/play_live_stream.html', d)
 
-class ListProgram(View):
+class ListProgram(LoginRequiredMixin, View):
 
     def render_(self, request, station_id):
         logger = logging.getLogger('radio.debug')

@@ -1,8 +1,8 @@
-{% extends "base.html" %}
+{% extends "base1.html" %}
 
 {% block body %}
   {{ play.name }}<br><br>
-  <audio id="audio" src="{% url 'tune' station_id=play.station_id %}" preload="metadata" autoplay>
+  <audio id="audio" src="{% url 'radiko_app:tune' station_id=play.station_id %}" preload="metadata" autoplay>
   </audio>
 <div>
 <input type="button" value="Play" onClick="playAudio()">

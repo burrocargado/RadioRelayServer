@@ -2,6 +2,7 @@ from django.urls import path
 
 from . import views
 
+app_name = 'radiko_app'
 urlpatterns = [
     path('', views.index, name='index'),
     path('stream/<str:station_id>', views.Tune.as_view(), name='tune'),

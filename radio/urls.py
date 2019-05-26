@@ -18,5 +18,6 @@ from django.urls import include, path
 
 urlpatterns = [
     path('radiko/', include('radiko_app.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),
     path('admin/', admin.site.urls),
 ]

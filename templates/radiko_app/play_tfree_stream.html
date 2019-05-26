@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base1.html" %}
 
 {% block body %}
   {{ play.from }}<br>
@@ -27,7 +27,7 @@
   </script>
   </form>
   <br>
-  <audio id="audio" src="{% url 'tune' station_id=play.station_id %}?ft={{ play.ft }}&to={{ play.to }}&seek={{ play.seek }}" preload="metadata" autoplay>
+  <audio id="audio" src="{% url 'radiko_app:tune' station_id=play.station_id %}?ft={{ play.ft }}&to={{ play.to }}&seek={{ play.seek }}" preload="metadata" autoplay>
   </audio>
 <div>
 <input type="button" value="Play" onClick="playAudio()">

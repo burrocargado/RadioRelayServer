@@ -23,7 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #SECRET_KEY = 'peml&5ldn#p^47$sy3_9jn+e#mg197lm0(5qy+3@!+l@ag$hrv'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 #ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
@@ -57,7 +57,7 @@ ROOT_URLCONF = 'radio.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')], 
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -163,3 +163,5 @@ LOGGING = {
 }
 
 from .local_settings import *
+LOGIN_REDIRECT_URL = '/radiko/station/'
+LOGIN_URL = '/accounts/login/'

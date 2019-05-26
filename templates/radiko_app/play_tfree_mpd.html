@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base1.html" %}
 
 {% block body %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
@@ -29,7 +29,7 @@ Position(sec): <span id="position">0</span> / <span id="duration">{{ play.dur }}
   });
   function update(){
     $.ajax({
-      url: '{% url 'status' %}',
+      url: '{% url 'radiko_app:status' %}',
       type: 'GET',
       dataType: 'json',
       cache : false

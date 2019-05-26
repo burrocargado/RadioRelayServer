@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
-{% block body %}
+{% block title %}Time Table {{ name }}{% endblock %}
+
+{% block content %}
   <form id="timer-record" name="timerrec" method="post" action="" target="if-downld">
     {% csrf_token %}
     <input type="hidden" name="station_id" value="{{ station_id }}">
