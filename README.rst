@@ -18,39 +18,42 @@ Requirement
 :Django: 2.2
 :xmltodict: 0.12.0
 :django-background-tasks: 1.2.0
-:ffmpeg: 4.1
+:GStreamer: 1.14.4
  
 Quick start
 ===========
-1. プロジェクトのクローン::
- 
+1. GStreamerのインストール::
+
+    sudo apt-get install gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-tools
+
+2. プロジェクトのクローン::
+
     git clone https://github.com/burrocargado/RadioRelayServer
     cd RadioRelayServer
     git checkout develop
- 
-2. モデルのマイグレーション::
- 
+
+3. モデルのマイグレーション::
+
     python manage.py makemigrations
     python manage.py migrate
- 
-3. 設定::
-    
+
+4. 設定::
+
     MPDは別途用意してください。
-    ffmpegをプロジェクトのディレクトリに置いてください。
     radio/local_settings.pyを作成。
     詳細はlocal_settings_sample.py参照、
     SECRET_KEYはgenerate_secretkey_setting.pyを用いて生成、
     ALLOWED_HOSTSにDjangoを実行するホストのIPアドレスを追加。
- 
-4. 起動::
-    
+
+5. 起動::
+
     python manage.py runserver 0.0.0.0:9000　（サーバー本体）
     python manage.py process_tasks --queue update-program （番組表更新タスク）
     python manage.py process_tasks --queue downoad （タイムフリーダウンロード用タスク）
     python manage.py process_tasks --queue timer_rec （予約録音用タスク）
-     
-5. 使い方::
-　　　　
+
+6. 使い方::
+
     お使いのMPDクライアントから上記のプレイリスト（設定を変えていなければ00_radiko.m3u）
     を読み込んで選局してください。
     

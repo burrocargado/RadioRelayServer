@@ -32,7 +32,6 @@ class Radiko():
         'http://f-radiko.smartstream.ne.jp/{}' 
         '/_definst_/simul-stream.stream/playlist.m3u8'
     )
-    FFMPEG = 'ffmpeg'
     TIMEFREE_URL = (
         'https://radiko.jp/v2/api/ts/playlist.m3u8'
         '?station_id={0}'
@@ -163,11 +162,6 @@ class Radiko():
                     t1 = datetime.strptime(ft, '%Y%m%d%H%M%S')
                     t2 = t1 + timedelta(seconds=seek)
                     seek_str = t2.strftime('%Y%m%d%H%M%S')
-                    #t0 = datetime.strptime('00:00:00', '%H:%M:%S')
-                    #seek_ffmpeg = (
-                    #    t0 + timedelta(seconds=seek)
-                    #).strftime('%H:%M:%S')
-                    #seek_opt = '-ss {} '.format(seek_ffmpeg)
                     url = Radiko.TIMEFREE_URL.format(
                         station, seek_str, to
                     )
@@ -177,20 +171,24 @@ class Radiko():
             self.logger.debug('getting: ' + url)
             for ctr in range(2):
                 token, area_id = self.get_token(trial=ctr)
-                m3u8 = self.gen_temp_chunk_m3u8_url(url, token)
-                if m3u8:
-                    self.logger.info(m3u8)
+                m3u8_url = self.gen_temp_chunk_m3u8_url(url, token)
+                if m3u8_url:
+                    self.logger.info(m3u8_url)
                     break
                 self.logger.info('getting new token')
-            if not m3u8:
+            if not m3u8_url:
                 self.logger.error('gen_temp_chunk_m3u8_url fail')
             else:
                 cmd = (
-                    "{0} -y "
-                    "-fflags +discardcorrupt "
-                    "-i '{1}' "
-                    "-codec:a copy -f adts -loglevel error -"
-                ).format(Radiko.FFMPEG, m3u8)
+                    "gst-launch-1.0 "
+                    "souphttpsrc location=\"{0}\" "
+                    #"extra-headers=\"extra-headers, X-Radiko-AuthToken=(string){1};\" "
+                    "is-live=true "
+                    "! hlsdemux ! audio/mpeg "
+                    "! aacparse "
+                    "! fdsink sync=true"
+                ).format(m3u8_url)
+                #).format(url, token)
                 
                 self.logger.debug('cmd: ' + cmd)
                 proc = subprocess.Popen(
@@ -201,7 +199,7 @@ class Radiko():
                     .format(os.getpgid(proc.pid)))
                 try:
                     while True:
-                        out = proc.stdout.read(1024)
+                        out = proc.stdout.read(512)
                         if proc.poll() is not None:
                             self.logger.error(
                                 'subprocess died: {}'.format(station)
@@ -236,24 +234,35 @@ class Radiko():
             return
         for ctr in range(2):
             token, area_id = self.get_token(trial=ctr)
-            m3u8 = self.gen_temp_chunk_m3u8_url(url, token)
-            if m3u8:
+            m3u8_url = self.gen_temp_chunk_m3u8_url(url, token)
+            if m3u8_url:
                 break
             self.logger.info('getting new token')
-        if not m3u8:
+        if not m3u8_url:
             self.logger.error('gen_temp_chunk_m3u8_url fail')
         else:
             if timefree:
                 cmd = (
-                    "{0} -i '{1}' "
-                    "-acodec copy -bsf:a aac_adtstoasc -loglevel error {2}"
-                ).format(Radiko.FFMPEG, m3u8, outfile)
+                    "gst-launch-1.0 "
+                    "souphttpsrc location=\"{0}\" "
+                    "is-live=true "
+                    "! hlsdemux ! audio/mpeg "
+                    "! aacparse "
+                    "! filesink location=\"{1}\" "
+                ).format(m3u8_url, outfile)
             elif liverec:
                 cmd = (
-                    "({0} -i '{1}' "
-                    "-acodec copy -bsf:a aac_adtstoasc -loglevel error {2}) "
-                    "& sleep {3} ; ps $! > /dev/null 2>&1 && kill $!"
-                ).format(Radiko.FFMPEG, m3u8, outfile, liverec['duration'])
+                    "("
+                    "gst-launch-1.0 "
+                    "souphttpsrc location=\"{0}\" "
+                    "is-live=true "
+                    "! hlsdemux ! audio/mpeg "
+                    "! aacparse "
+                    "! filesink location=\"{1}\" "
+                    ") "
+                    "& sleep {2} ; ps $! > /dev/null 2>&1 && kill $!"
+                ).format(m3u8_url, outfile, liverec['duration'])
+
             proc = subprocess.Popen(
                 cmd, shell=True, stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT, preexec_fn=os.setsid

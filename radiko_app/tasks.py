@@ -36,12 +36,11 @@ def record_program(params):
         act = {'mail':settings.RADIKO_MAIL, 'pass':settings.RADIKO_PASS}
     except:
         act = {}
-    radiko.Radiko.FFMPEG = os.path.join(settings.BASE_DIR, 'ffmpeg')
     rdk = radiko.Radiko(act, logger=logging.getLogger('radio.debug'))
     fbase = '{}_{}_{}_rec'.format(ft, to, station_id)
     path = settings.RADIKO_REC_DIR
     fpdata = os.path.join(path, '{}.json'.format(fbase))
-    frec = os.path.join(path, '{}.mp4'.format(fbase))
+    frec = os.path.join(path, '{}.aac'.format(fbase))
     logger.info('recording: {}'.format(frec))
     with open(fpdata, "w") as f:
         f.write(pgm_data)
@@ -66,12 +65,11 @@ def download_program(p_id):
         act = {'mail':settings.RADIKO_MAIL, 'pass':settings.RADIKO_PASS}
     except:
         act = {}
-    radiko.Radiko.FFMPEG = os.path.join(settings.BASE_DIR, 'ffmpeg')
     rdk = radiko.Radiko(act, logger=logging.getLogger('radio.debug'))
     fbase = '{}_{}_{}'.format(ft, to, station_id)
     path = settings.RADIKO_REC_DIR
     fpdata = os.path.join(path, '{}.json'.format(fbase))
-    frec = os.path.join(path, '{}.mp4'.format(fbase))    
+    frec = os.path.join(path, '{}.aac'.format(fbase))    
     pgm_data = serializers.serialize("json", [p], ensure_ascii=False)
     logger.info('download: {}'.format(frec))
     with open(fpdata, "w") as f:

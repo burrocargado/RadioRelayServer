@@ -14,7 +14,6 @@ class RadikoMiddleware:
         self.get_response = get_response
         #print('(1) init')
 
-        radiko.Radiko.FFMPEG = os.path.join(settings.BASE_DIR, 'ffmpeg')
         playlist = {
             'url': settings.BASE_URL + '/radiko/stream/{}', 
             'file': settings.RADIKO_PLAYLIST_FILE
