@@ -195,22 +195,23 @@ class Radiko():
                     cmd, shell=True, stdout=subprocess.PIPE,
                     preexec_fn=os.setsid
                 )
+                pgid = os.getpgid(proc.pid)
                 self.logger.debug('started subprocess: group id {}'
-                    .format(os.getpgid(proc.pid)))
+                    .format(pgid))
                 try:
                     while True:
                         out = proc.stdout.read(512)
-                        if proc.poll() is not None:
+                        ret = proc.poll()
+                        if ret is not None:
                             self.logger.error(
-                                'subprocess died: {}'.format(station)
+                                'subprocess terminated: {}, return: {}'.format(station, ret)
                             )
                             break
                         if out:
                             yield out
                 finally:
                     self.logger.info('stop playing {}'.format(station))
-                    if not proc.poll():
-                        pgid = os.getpgid(proc.pid)
+                    if proc.poll() is None:
                         self.logger.debug(
                             'killing process group {}'.format(pgid)
                         )
