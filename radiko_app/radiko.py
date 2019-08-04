@@ -179,6 +179,10 @@ class Radiko():
             if not m3u8_url:
                 self.logger.error('gen_temp_chunk_m3u8_url fail')
             else:
+                if timefree:
+                    fdsink_opt = 'ts-offset=-15000000000 sync=true'
+                else:
+                    fdsink_opt = 'sync=false'
                 cmd = (
                     "gst-launch-1.0 "
                     "souphttpsrc location=\"{0}\" "
@@ -186,8 +190,8 @@ class Radiko():
                     "is-live=true "
                     "! hlsdemux ! audio/mpeg "
                     "! aacparse "
-                    "! fdsink sync=true"
-                ).format(m3u8_url)
+                    "! fdsink {1}"
+                ).format(m3u8_url, fdsink_opt)
                 #).format(url, token)
                 
                 self.logger.debug('cmd: ' + cmd)
