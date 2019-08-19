@@ -13,7 +13,7 @@ RadioRelayServer
  
 Requirement
 ===========
- 
+:mpc: 0.29
 :Python: 3.5.2
 :Django: 2.2
 :xmltodict: 0.12.0
@@ -22,9 +22,18 @@ Requirement
  
 Quick start
 ===========
-1. GStreamerのインストール::
 
+1. 依存するソフトウエアのインストール::
+
+    audo apt-get update
+    sudo apt-get install mpc
     sudo apt-get install gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-tools
+    sudo apt-get install python3-pip
+    sudo -H pip3 install --upgrade pip
+    sudo -H pip3 install virtualenv
+    virtualenv -p /usr/bin/python3 ~/radio
+    source ~/radio/bin/activate
+    pip install django==2.2 xmltodict==0.12 django-background-tasks==1.2
 
 2. プロジェクトのクローン::
 
@@ -39,7 +48,7 @@ Quick start
 
 4. 設定::
 
-    MPDは別途用意してください。
+    MPDは別途インストール、設定してください。
     radio/local_settings.pyを作成。
     詳細はlocal_settings_sample.py参照、
     SECRET_KEYはgenerate_secretkey_setting.pyを用いて生成、
