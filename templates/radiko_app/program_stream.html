@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Time Table {{ name }}{% endblock %}
+
+{% block content %}
+  <form id="timer-record" name="timerrec" method="post" action="" target="if-downld">
+    {% csrf_token %}
+    <input type="hidden" name="station_id" value="{{ station_id }}">
+  </form>
+  <form id="bulk-download" name="download" method="post" action="" target="if-downld">
+    {% csrf_token %}
+    <input type="hidden" name="station_id" value="{{ station_id }}">
+  </form>
+
+  {{ name }}
+  <a href="#now">Jump to now</a>
+    <table border="1" style="table-layout:fixed; width:640px;">
+      <thead>
+        <tr>
+          <th style="width:80px;">Start</th>
+          <th style="width:30px;">DUR</th>
+          <th style="width:300px;">Title</th>
+          <th style="width:90px;">
+            <input type="submit" name="tmrec" value="Rec" form="timer-record">
+            <!--
+            <input type="submit" name="tmcancel" value="Cncl" form="timer-record">
+            -->
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for prog in programs_future %}
+          <tr>
+            <td>{{ prog.from }}</td>
+            <td align="right">{{ prog.durm }}</td>
+            <td>{{ prog.title }}</td>
+            <td align="center">
+            <span style="display:block; text-align:left; width:50px">
+              <input type="checkbox" name="chk_tm" value="{{ prog.id }}" form="timer-record">
+              {{ prog.download }}
+            </span>
+            </td>
+          </tr>
+        {% endfor %}
+        <tr>
+          <th>Start</th>
+          <th>DUR</th>
+          <th>Title</th>
+          <th>
+            <input type="submit" name="tmrec" value="Rec" form="timer-record">
+            <!--
+            <input type="submit" name="tmcancel" value="Cncl" form="timer-record">
+            -->
+          </th>
+        </tr>
+        <tr>
+          <td colspan=4>
+            <a name="now">{{ name }}</a>
+          </td>
+        </tr>
+        <tr>
+          <td colspan=3 align="center">
+            <IFRAME NAME="if-control" id="control" width="500" height="180"></IFRAME>
+          </td>
+          <td align="center">
+            <IFRAME NAME="if-downld" id="if-downld" width="100" height="180"></IFRAME>
+          </td>
+        </tr>
+        <tr>
+          <td colspan=4>
+            <a name="now">{{ name }}</a>
+          </td>
+        </tr>
+        <tr>
+          <th>Start</th>
+          <th>DUR</th>
+          <th>Title</th>
+          <th>
+            <input type="submit" name="downld" value="Download" form="bulk-download">
+          </th>
+        </tr>
+        {% for prog in programs_past %}
+          <tr>
+            <td>{{ prog.from }}</td>
+            <td align="right">{{ prog.durm }}</td>
+            <td>{{ prog.title }}</td>
+            <td align="left">
+            <form name="f1" id="f1" method="post" action="" target="if-control">
+              {% csrf_token %}
+              <input type="hidden" name="id" value="{{ prog.id }}">
+              <input type="submit" name="stream" value="Play">
+              <input type="checkbox" name="chk_dl" value="{{ prog.id }}" form="bulk-download">
+              {{ prog.download }}
+            </form>
+            </td>
+          </tr>
+        {% endfor %}
+        <tr>
+          <th>Start</th>
+          <th>DUR</th>
+          <th>Title</th>
+          <th>
+            <input type="submit" name="downld" value="Download" form="bulk-download">
+          </th>
+        </tr>
+      </tbody>
+    </table>
+    {{ name }}
+    <a href="#now">Jump to now</a><br>
+  <br>
+{% endblock %}
+

@@ -112,9 +112,52 @@ class ListStation(LoginRequiredMixin, View):
                 }}
                 return render(request, 'radiko_app/play_live_stream.html', d)
 
+class ListStationMPD(LoginRequiredMixin, View):
+    def get(self, request):
+        logger = logging.getLogger('radio.debug')
+        logger.debug(request)
+        stations = Station.objects.all().order_by('station_no')
+        d = {'stations': stations}
+        return render(request, 'radiko_app/station_mpd.html', d)
+
+    def post(self, request):
+        logger = logging.getLogger('radio.debug')
+        logger.debug(request)
+        if request.method == 'POST':
+            logger.debug(request.POST)
+            station = request.POST['station_id']
+            name = Station.objects.get(station_id=station).name
+            url = '{}/radiko/stream/{}'.format(settings.BASE_URL, station)
+            mpd_play(url.encode())
+            response = HttpResponse(
+                'Playing on MPD<br><br>Live: {}'.format(name)
+            )
+            return response
+
+class ListStationStream(LoginRequiredMixin, View):
+    def get(self, request):
+        logger = logging.getLogger('radio.debug')
+        logger.debug(request)
+        stations = Station.objects.all().order_by('station_no')
+        d = {'stations': stations}
+        return render(request, 'radiko_app/station_stream.html', d)
+
+    def post(self, request):
+        logger = logging.getLogger('radio.debug')
+        logger.debug(request)
+        if request.method == 'POST':
+            logger.debug(request.POST)
+            station = request.POST['station_id']
+            name = Station.objects.get(station_id=station).name
+            d = {'play':{
+                'station_id': station, 
+                'name': name
+            }}
+            return render(request, 'radiko_app/play_live_stream.html', d)
+
 class ListProgram(LoginRequiredMixin, View):
 
-    def render_(self, request, station_id):
+    def render_(self, request, station_id, kwargs):
         logger = logging.getLogger('radio.debug')
         logger.debug(request)
         logger.debug(station_id)
@@ -162,13 +205,20 @@ class ListProgram(LoginRequiredMixin, View):
             'programs_past': pgmp, 
             'programs_future': pgmf
         }
-        return render(request, 'radiko_app/program.html', d)
+        if 'target' not in kwargs:
+            return render(request, 'radiko_app/program.html', d)
+        elif kwargs['target'] == 'mpd':
+            return render(request, 'radiko_app/program_mpd.html', d)
+        elif kwargs['target'] == 'stream':
+            return render(request, 'radiko_app/program_stream.html', d)
+        else:
+            return render(request, 'radiko_app/program.html', d)
 
-    def get(self, request, station_id):
+    def get(self, request, station_id, **kwargs):
         
-        return self.render_(request, station_id)
+        return self.render_(request, station_id, kwargs)
 
-    def post(self, request, station_id):
+    def post(self, request, station_id, **kwargs):
         logger = logging.getLogger('radio.debug')
         logger.debug(request)
         if request.method == 'POST':
