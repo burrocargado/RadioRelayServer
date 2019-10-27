@@ -32,13 +32,13 @@ Quick start
     sudo -H pip3 install virtualenv
     virtualenv -p /usr/bin/python3 ~/radio
     source ~/radio/bin/activate
-    pip install django==2.2 xmltodict==0.12 django-background-tasks==1.2 python-mpd2==1.0
 
-2. プロジェクトのクローン::
+2. プロジェクトのクローンと依存するPythonモジュールのインストール::
 
     git clone https://github.com/burrocargado/RadioRelayServer
     cd RadioRelayServer
     git checkout develop
+    pip install -r requirements.txt
 
 3. モデルのマイグレーション::
 
