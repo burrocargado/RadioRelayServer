@@ -45,7 +45,12 @@ Quick start
     python manage.py makemigrations
     python manage.py migrate
 
-4. 設定::
+4. 管理者アカウントの作成::
+
+    python add_admin.py
+    python manage.py loaddata default_admin.json
+
+5. 設定::
 
     MPDは別途インストール、設定してください。
     radio/local_settings.pyを作成。
@@ -56,19 +61,19 @@ Quick start
     MPD_PORTにMPDのポート番号を設定
     BASE_URL='http://127.0.0.1:9000' のIPアドレスをDjangoを実行するホストのIPアドレスに修正
 
-5. 起動::
+6. 起動::
 
     python manage.py runserver 0.0.0.0:9000　（サーバー本体）
     python manage.py process_tasks --queue update-program （番組表更新タスク）
     python manage.py process_tasks --queue downoad （タイムフリーダウンロード用タスク）
     python manage.py process_tasks --queue timer_rec （予約録音用タスク）
 
-6. 使い方::
+7. 使い方::
 
     お使いのMPDクライアントから上記のプレイリスト（設定を変えていなければ00_radiko.m3u）
     を読み込んで選局してください。
     
     Webインターフェース
     http://xxx.xxx.xxx.xxx:9000/radiko/station
-
+    IPアドレス部分はDjangoを実行するホストのアドレス
 
