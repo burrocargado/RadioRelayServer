@@ -28,6 +28,7 @@ class Radiko():
     PROG_NOW_URL = "http://radiko.jp/v3/program/now/{}.xml"
     PROG_TIMEFREE_URL = "http://radiko.jp/v3/program/date/{}/{}.xml"
     PROG_WEEKLY_URL = "http://radiko.jp/v3/program/station/weekly/{}.xml"
+    
     LIVE_URL = (
         'http://f-radiko.smartstream.ne.jp/{}' 
         '/_definst_/simul-stream.stream/playlist.m3u8'
@@ -35,7 +36,7 @@ class Radiko():
     TIMEFREE_URL = (
         'https://radiko.jp/v2/api/ts/playlist.m3u8'
         '?station_id={0}'
-        '&start_at={1}&ft={1}&end_at={2}&to={2}'#&seek={3}'
+        '&start_at={1}&ft={1}&end_at={2}&to={2}'
         '&l=15'
         '&type=b'
     )
@@ -123,110 +124,84 @@ class Radiko():
             self.logger.info('premium logout')
             return json.loads(txt.decode())
 
-    def gen_temp_chunk_m3u8_url(self, url, auth_token):
-
-        headers =  {
-          "X-Radiko-AuthToken": auth_token,
-          "Origin": "http://radiko.jp",
-          "Referer": "http://radiko.jp/",
-        }
-        req  = urllib.request.Request(url, None, headers)
-        try:
-            res  = urllib.request.urlopen(req)
-        except urllib.request.HTTPError as e:
-            self.logger.error(e)
-            if e.code == 403:
-                return None
-            else:
-                raise e
-        body = res.read().decode()
-        lines = re.findall('^https?://.+m3u8$', body, flags=(re.MULTILINE))
-
-        return lines[0]
-
     def play(self, station, timefree={}):
         self.logger.info('playing {}'.format(station))
-        self.current_station = station
-        if station in self.stations:
-            if timefree:
-                ft = timefree['ft']
-                to = timefree['to']
-                if 'seek' not in timefree:
-                    seek_str = ft
-                    seek_opt = ''
-                    url = Radiko.TIMEFREE_URL.format(
-                        station, ft, to
-                    )
-                else:
-                    seek = int(timefree['seek'])
-                    t1 = datetime.strptime(ft, '%Y%m%d%H%M%S')
-                    t2 = t1 + timedelta(seconds=seek)
-                    seek_str = t2.strftime('%Y%m%d%H%M%S')
-                    url = Radiko.TIMEFREE_URL.format(
-                        station, seek_str, to
-                    )
-            else:
-                url = Radiko.LIVE_URL.format(station)
-                seek_opt = ''
-            self.logger.debug('getting: ' + url)
-            for ctr in range(2):
-                token, area_id = self.get_token(trial=ctr)
-                m3u8_url = self.gen_temp_chunk_m3u8_url(url, token)
-                if m3u8_url:
-                    self.logger.info(m3u8_url)
-                    break
-                self.logger.info('getting new token')
-            if not m3u8_url:
-                self.logger.error('gen_temp_chunk_m3u8_url fail')
-            else:
-                if timefree:
-                    fdsink_opt = 'ts-offset=-15000000000 sync=true'
-                else:
-                    fdsink_opt = 'sync=false'
-                cmd = (
-                    "gst-launch-1.0 "
-                    "souphttpsrc location=\"{0}\" "
-                    #"extra-headers=\"extra-headers, X-Radiko-AuthToken=(string){1};\" "
-                    "is-live=true "
-                    "! hlsdemux ! audio/mpeg "
-                    "! aacparse "
-                    "! fdsink {1}"
-                ).format(m3u8_url, fdsink_opt)
-                #).format(url, token)
-                
-                self.logger.debug('cmd: ' + cmd)
-                proc = subprocess.Popen(
-                    cmd, shell=True, stdout=subprocess.PIPE,
-                    preexec_fn=os.setsid
-                )
-                pgid = os.getpgid(proc.pid)
-                self.logger.debug('started subprocess: group id {}'
-                    .format(pgid))
-                try:
-                    while True:
-                        out = proc.stdout.read(512)
-                        ret = proc.poll()
-                        if ret is not None:
-                            self.logger.error(
-                                'subprocess terminated: {}, return: {}'.format(station, ret)
-                            )
-                            break
-                        if out:
-                            yield out
-                finally:
-                    self.logger.info('stop playing {}'.format(station))
-                    if proc.poll() is None:
-                        self.logger.debug(
-                            'killing process group {}'.format(pgid)
-                        )
-                        os.killpg(pgid, signal.SIGTERM)
-                        proc.wait()
-        else:
+        if station not in self.stations:
             self.logger.error('{} not in available stations'.format(station))
+            return
+        self.current_station = station
+            
+        if timefree:
+            ft = timefree['ft']
+            to = timefree['to']
+            if 'seek' not in timefree:
+                seek_str = ft
+                seek_opt = ''
+                url = Radiko.TIMEFREE_URL.format(
+                    station, ft, to
+                )
+            else:
+                seek = int(timefree['seek'])
+                t1 = datetime.strptime(ft, '%Y%m%d%H%M%S')
+                t2 = t1 + timedelta(seconds=seek)
+                seek_str = t2.strftime('%Y%m%d%H%M%S')
+                url = Radiko.TIMEFREE_URL.format(
+                    station, seek_str, to
+                )
+        else:
+            url = Radiko.LIVE_URL.format(station)
+            seek_opt = ''
+        self.logger.debug('getting: ' + url)
+        token, area_id = self.get_token(trial=1)
+        if timefree:
+            fdsink_opt = 'ts-offset=-15000000000 sync=true'
+        else:
+            fdsink_opt = 'sync=false'
+        cmd = (
+            "gst-launch-1.0 "
+            "souphttpsrc location=\"{0}\" "
+            "extra-headers=\"extra-headers, X-Radiko-AuthToken=(string){2};\" "
+            "is-live=true "
+            "! hlsdemux ! audio/mpeg "
+            "! aacparse "
+            "! fdsink {1}"
+        ).format(url, fdsink_opt, token)
+        
+        self.logger.debug('cmd: ' + cmd)
+        proc = subprocess.Popen(
+            cmd, shell=True, stdout=subprocess.PIPE,
+            preexec_fn=os.setsid
+        )
+        pgid = os.getpgid(proc.pid)
+        self.logger.debug('started subprocess: group id {}'
+            .format(pgid))
+        try:
+            while True:
+                out = proc.stdout.read(512)
+                ret = proc.poll()
+                if ret is not None:
+                    self.logger.error(
+                        'subprocess terminated: {}, return: {}'.format(station, ret)
+                    )
+                    break
+                if out:
+                    yield out
+        finally:
+            self.logger.info('stop playing {}'.format(station))
+            if proc.poll() is None:
+                self.logger.debug(
+                    'killing process group {}'.format(pgid)
+                )
+                os.killpg(pgid, signal.SIGTERM)
+                proc.wait()
 
     def download(self, station, outfile, timefree={}, liverec={}):
         self.logger.info('downloading {}'.format(station))
+        if station not in self.stations:
+            self.logger.error('{} not in available stations'.format(station))
+            return
         self.current_station = station
+
         if timefree:
             ft = timefree['ft']
             to = timefree['to']
@@ -237,42 +212,36 @@ class Radiko():
             url = Radiko.LIVE_URL.format(station)
         else:
             return
-        for ctr in range(2):
-            token, area_id = self.get_token(trial=ctr)
-            m3u8_url = self.gen_temp_chunk_m3u8_url(url, token)
-            if m3u8_url:
-                break
-            self.logger.info('getting new token')
-        if not m3u8_url:
-            self.logger.error('gen_temp_chunk_m3u8_url fail')
-        else:
-            if timefree:
-                cmd = (
-                    "gst-launch-1.0 "
-                    "souphttpsrc location=\"{0}\" "
-                    "is-live=true "
-                    "! hlsdemux ! audio/mpeg "
-                    "! aacparse "
-                    "! filesink location=\"{1}\" "
-                ).format(m3u8_url, outfile)
-            elif liverec:
-                cmd = (
-                    "("
-                    "gst-launch-1.0 "
-                    "souphttpsrc location=\"{0}\" "
-                    "is-live=true "
-                    "! hlsdemux ! audio/mpeg "
-                    "! aacparse "
-                    "! filesink location=\"{1}\" "
-                    ") "
-                    "& sleep {2} ; ps $! > /dev/null 2>&1 && kill $!"
-                ).format(m3u8_url, outfile, liverec['duration'])
+        token, area_id = self.get_token(trial=1)
+        if timefree:
+            cmd = (
+                "gst-launch-1.0 "
+                "souphttpsrc location=\"{0}\" "
+                "extra-headers=\"extra-headers, X-Radiko-AuthToken=(string){2};\" "
+                "is-live=true "
+                "! hlsdemux ! audio/mpeg "
+                "! aacparse "
+                "! filesink location=\"{1}\" "
+            ).format(url, outfile, token)
+        elif liverec:
+            cmd = (
+                "("
+                "gst-launch-1.0 "
+                "souphttpsrc location=\"{0}\" "
+                "extra-headers=\"extra-headers, X-Radiko-AuthToken=(string){3};\" "
+                "is-live=true "
+                "! hlsdemux ! audio/mpeg "
+                "! aacparse "
+                "! filesink location=\"{1}\" "
+                ") "
+                "& sleep {2} ; ps $! > /dev/null 2>&1 && kill $!"
+            ).format(url, outfile, liverec['duration'], token)
 
-            proc = subprocess.Popen(
-                cmd, shell=True, stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT, preexec_fn=os.setsid
-            )
-            proc.wait()
+        proc = subprocess.Popen(
+            cmd, shell=True, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, preexec_fn=os.setsid
+        )
+        proc.wait()
 
     def get_stations(self):
         res = urllib.request.urlopen(Radiko.CHANNEL_FULL_URL)
