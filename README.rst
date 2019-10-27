@@ -13,11 +13,11 @@ RadioRelayServer
  
 Requirement
 ===========
-:mpc: 0.29
 :Python: 3.5.2
 :Django: 2.2
 :xmltodict: 0.12.0
 :django-background-tasks: 1.2.0
+:python-mpd2: 1.0
 :GStreamer: 1.14.4
  
 Quick start
@@ -26,14 +26,13 @@ Quick start
 1. 依存するソフトウエアのインストール::
 
     audo apt-get update
-    sudo apt-get install mpc
     sudo apt-get install gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-tools
     sudo apt-get install python3-pip
     sudo -H pip3 install --upgrade pip
     sudo -H pip3 install virtualenv
     virtualenv -p /usr/bin/python3 ~/radio
     source ~/radio/bin/activate
-    pip install django==2.2 xmltodict==0.12 django-background-tasks==1.2
+    pip install django==2.2 xmltodict==0.12 django-background-tasks==1.2 python-mpd2==1.0
 
 2. プロジェクトのクローン::
 
@@ -53,6 +52,9 @@ Quick start
     詳細はlocal_settings_sample.py参照、
     SECRET_KEYはgenerate_secretkey_setting.pyを用いて生成、
     ALLOWED_HOSTSにDjangoを実行するホストのIPアドレスを追加。
+    MPD_ADDRにMPDを実行するホストのIPアドレスを設定
+    MPD_PORTにMPDのポート番号を設定
+    BASE_URL='http://127.0.0.1:9000' のIPアドレスをDjangoを実行するホストのIPアドレスに修正
 
 5. 起動::
 

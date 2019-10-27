@@ -19,51 +19,30 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 
 import logging
 
+from mpd import MPDClient
+
 def index(request):
     return redirect('station/')
 
-def mpd_play(content):
-    logger = logging.getLogger('radio.debug')
-    logger.info('Request MPD to play {}'.format(content))
-    proc = subprocess.Popen(
-        'mpc clear', shell=True, 
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    ret = proc.communicate()
-    logger.debug(ret)
-    proc = subprocess.Popen(
-        'mpc add', shell=True, 
-        stdin=subprocess.PIPE, 
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    ret = proc.communicate(content)
-    logger.debug(ret)
-    proc = subprocess.Popen(
-        'mpc play', shell=True, 
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE
-    )
-    ret = proc.communicate()
-    logger.debug(ret)
+def mpd_play(content, title):
+        client = MPDClient()
+        client.connect(settings.MPD_ADDR, settings.MPD_PORT)
+        client.clear()
+        plid = client.addid(content)
+        client.addtagid(plid, 'Title', title)
+        client.playid(plid)
 
 def mpd_status():
-    ret = subprocess.check_output(
-        "mpc -f '%file%'", shell = True
-    ).decode('utf-8').split("\n")[:3]
-    try:
-        content = ret[0]
-        r = re.compile(
-            '\[(.+)\]\s+#([0-9]+)/([0-9]+)\s+([0-9:]+)/([0-9:]+)\s+\([0-9]+%\)'
-        )
-        stat, n, nt, ct, tt = r.match(ret[1]).groups()
-        k = [1, 60, 3600, 86400]
-        t = 0 
-        for i, s in enumerate(ct.split(':')[::-1]): 
-            t += k[i] * int(s)
+    client = MPDClient()
+    client.connect(settings.MPD_ADDR, settings.MPD_PORT)
+    status = client.status()
+    current = client.currentsong()
+    if 'elapsed' in status:
+        stat = status['state']
+        content = current['file']
+        t = int(float(status['elapsed']))
         return content, stat, t
-    except:
+    else:
         return '', '', 0
 
 class MPDStatus(View):
@@ -100,7 +79,7 @@ class ListStation(LoginRequiredMixin, View):
             name = Station.objects.get(station_id=station).name
             if 'play' in request.POST:
                 url = '{}/radiko/stream/{}'.format(settings.BASE_URL, station)
-                mpd_play(url.encode())
+                mpd_play(url, name)
                 response = HttpResponse(
                     'Playing on MPD<br><br>Live: {}'.format(name)
                 )
@@ -128,7 +107,7 @@ class ListStationMPD(LoginRequiredMixin, View):
             station = request.POST['station_id']
             name = Station.objects.get(station_id=station).name
             url = '{}/radiko/stream/{}'.format(settings.BASE_URL, station)
-            mpd_play(url.encode())
+            mpd_play(url, name)
             response = HttpResponse(
                 'Playing on MPD<br><br>Live: {}'.format(name)
             )
@@ -281,8 +260,8 @@ class ListProgram(LoginRequiredMixin, View):
                 url = (
                     '{0}/radiko/stream/{1}' 
                     '?ft={2}&to={3}&seek={4}'
-                ).format(settings.BASE_URL, station, ft, to, seek).encode()
-                mpd_play(url)
+                ).format(settings.BASE_URL, station, ft, to, seek)
+                mpd_play(url, title)
                 d = {'play':{
                     'id': p_id,
                     'station_id': station_id, 
@@ -292,7 +271,7 @@ class ListProgram(LoginRequiredMixin, View):
                     'seek': seek,
                     'title': title,
                     'from': t_from,
-                    'url': url.decode()
+                    'url': url
                 }}
                 return render(request, 'radiko_app/play_tfree_mpd.html', d)
             elif 'stream' in request.POST:

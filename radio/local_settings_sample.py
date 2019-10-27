@@ -10,3 +10,5 @@ SECRET_KEY = 'peml&5ldn#p^47$sy3_9jn+e#mg197lm0(5qy+3@!+l@ag$hrv'
 
 ALLOWED_HOSTS = ['xxx.xxx.xxx.xxx', '127.0.0.1', 'localhost']
 
+MPD_ADDR = 'xxx.xxx.xxx.xxx'
+MPD_PORT = 6600
