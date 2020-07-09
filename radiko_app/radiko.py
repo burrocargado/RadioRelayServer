@@ -219,8 +219,7 @@ class Radiko():
                 "souphttpsrc location=\"{0}\" "
                 "extra-headers=\"extra-headers, X-Radiko-AuthToken=(string){2};\" "
                 "is-live=true "
-                "! hlsdemux ! audio/mpeg "
-                "! aacparse "
+                "! hlsdemux "
                 "! filesink location=\"{1}\" "
             ).format(url, outfile, token)
         elif liverec:
@@ -230,13 +229,11 @@ class Radiko():
                 "souphttpsrc location=\"{0}\" "
                 "extra-headers=\"extra-headers, X-Radiko-AuthToken=(string){3};\" "
                 "is-live=true "
-                "! hlsdemux ! audio/mpeg "
-                "! aacparse "
+                "! hlsdemux "
                 "! filesink location=\"{1}\" "
                 ") "
                 "& sleep {2} ; ps $! > /dev/null 2>&1 && kill $!"
             ).format(url, outfile, liverec['duration'], token)
-
         proc = subprocess.Popen(
             cmd, shell=True, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT, preexec_fn=os.setsid
