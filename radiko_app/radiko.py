@@ -9,7 +9,6 @@ from collections import OrderedDict
 from datetime import datetime, timedelta
 from http.cookiejar import FileCookieJar
 import xml.etree.ElementTree as ET
-import xmltodict
 
 try:
     from . import radiko_auth_test as ra
@@ -310,13 +309,37 @@ class Radiko():
                 f.write('#EXTINF:-1,{}\n'.format(station_str))
                 f.write(url.format(station_id)+'\n')
     
+    @staticmethod
+    def parse_xml(xml_txt):
+        root = ET.fromstring(xml_txt)
+        def f(elem):
+            a = {}
+            for k, v in elem.attrib.items():
+                a['@'+k] = v
+            for e in elem:
+                if e.tag not in a:
+                    a[e.tag] = f(e)
+                elif type(a[e.tag]) is list:
+                    a[e.tag].append(f(e))
+                else:
+                    a[e.tag] = [a[e.tag]] + [f(e)]
+            if a:
+                return a
+            else:
+                return elem.text
+
+        return {root.tag: f(root)}
+    
     def get_program(self, date_str, region_id):
+        """
+        date_str: yyyymmdd
+        region_id: JPnn
+        """
         res = urllib.request.urlopen(
             Radiko.PROG_TIMEFREE_URL.format(date_str, region_id)
         )
-        program = xmltodict.parse(res.read())
-        return program
-    
+        return self.parse_xml(res.read())
+
     def get_program_w(self, station):
         try:
             res = urllib.request.urlopen(
@@ -325,8 +348,7 @@ class Radiko():
         except:
             self.logger.error('Error getting program: {}'.format(station))
             return {}
-        program = xmltodict.parse(res.read())
-        return program
+        return self.parse_xml(res.read())
 
     def __del__(self):
         Radiko.inst_ctr -= 1

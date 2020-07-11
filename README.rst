@@ -15,7 +15,6 @@ Requirement
 ===========
 :Python: 3.5.2
 :Django: 2.2
-:xmltodict: 0.12.0
 :django-background-tasks: 1.2.0
 :python-mpd2: 1.0
 :GStreamer: 1.14.4

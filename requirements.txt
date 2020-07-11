@@ -1,5 +1,4 @@
 django==2.2
 django-background-tasks==1.2
-xmltodict==0.12
 python-mpd2==1.0
 ipython
