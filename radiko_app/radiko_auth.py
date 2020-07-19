@@ -1,22 +1,34 @@
 import urllib.request
 import base64
-from . import radiko
 
-def get_token(trial=0, rdk=None, logger=None):
+AUTH1_URL="https://radiko.jp/v2/api/auth1"
+AUTH2_URL="https://radiko.jp/v2/api/auth2"
+AUTH_KEY = "bcd151073c03b352e1ef2fd66c32209da9ca0afa"
 
-    token = radiko.Radiko.token
-    area = radiko.Radiko.area
-    if not trial and token and area:
-        return token, area
+class RadikoAuth():
+    def __init__(self, parent):
+        self.parent = parent
+        self.logger = parent.logger
+        
+    def get_token(self, trial=0):
+        rdk = self.parent
+        token = rdk.token
+        area = rdk.area
+        if not trial and token and area:
+            return token, area
+
+        self.logger.debug('radiko_auth')
+        self.logger.debug(rdk.login_state)
+        res = self.auth1()
+        partialkey, token = self.get_partial_key(res)
+        txt = self.auth2(partialkey, token)
+        area_id, area_name, area_name_ascii = txt.strip().split(',')
+        rdk.token = token
+        rdk.area = area_id
+        
+        return token, area_id
     
-    AUTH1_URL="https://radiko.jp/v2/api/auth1"
-    AUTH2_URL="https://radiko.jp/v2/api/auth2"
-    AUTH_KEY = "bcd151073c03b352e1ef2fd66c32209da9ca0afa"
-
-    if logger:
-        logger.info('radiko_auth')
-        logger.info(rdk.login_state)
-
+    @staticmethod
     def auth1():
         auth_response = {}
 
@@ -35,7 +47,7 @@ def get_token(trial=0, rdk=None, logger=None):
 
         return auth_response
 
-
+    @staticmethod
     def get_partial_key(auth_response):
 
         authtoken = auth_response["headers"]["x-radiko-authtoken"]
@@ -49,7 +61,7 @@ def get_token(trial=0, rdk=None, logger=None):
 
         return partialkey, authtoken
 
-
+    @staticmethod
     def auth2(partialkey, auth_token) :
 
         headers =  {
@@ -64,13 +76,4 @@ def get_token(trial=0, rdk=None, logger=None):
         text = res.read().decode()
 
         return text
-
-    res = auth1()
-    partialkey, token = get_partial_key(res)
-    txt = auth2(partialkey, token)
-    area_id, area_name, area_name_ascii = txt.strip().split(',')
-    radiko.Radiko.token = token
-    radiko.Radiko.area = area_id
-
-    return token, area_id
 

@@ -11,9 +11,9 @@ from http.cookiejar import FileCookieJar
 import xml.etree.ElementTree as ET
 
 try:
-    from . import radiko_auth_test as ra
+    from .radiko_auth_test import RadikoAuth
 except:
-    from . import radiko_auth as ra
+    from .radiko_auth import RadikoAuth
 
 import logging
 
@@ -54,6 +54,7 @@ class Radiko():
         default_logger.addHandler(logging.NullHandler)
         self.logger = logger or default_logger
         self.logger.debug('Radiko constructor: {}'.format(Radiko.inst_ctr))
+        self.ra = RadikoAuth(self)
         self.login_state = False
         if Radiko.opener:
             opener = Radiko.opener
@@ -86,7 +87,7 @@ class Radiko():
 
     def get_token(self, trial=0):
         
-        return ra.get_token(trial=trial, rdk=self, logger=self.logger)
+        return self.ra.get_token(trial=trial)
 
     def login(self, acct, opener):
         post = {
@@ -357,4 +358,3 @@ class Radiko():
             ret = self.logout()
             if ret:
                 self.logger.debug(ret)
-
