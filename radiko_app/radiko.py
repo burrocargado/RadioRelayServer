@@ -130,7 +130,7 @@ class Radiko():
             self.logger.error('{} not in available stations'.format(station))
             return
         self.current_station = station
-            
+
         if timefree:
             ft = timefree['ft']
             to = timefree['to']
@@ -154,18 +154,26 @@ class Radiko():
         self.logger.debug('getting: ' + url)
         token, area_id = self.get_token(trial=1)
         if timefree:
-            fdsink_opt = 'ts-offset=-15000000000 sync=true'
+            cmd = (
+                "gst-launch-1.0 "
+                "souphttpsrc location=\"{0}\" "
+                "extra-headers=\"extra-headers, X-Radiko-AuthToken=(string){1};\" "
+                "is-live=true "
+                "! hlsdemux "
+                "! audio/mpeg "
+                "! aacparse "
+                "! fdsink ts-offset=-15000000000 sync=true"
+            ).format(url, token)
         else:
-            fdsink_opt = 'sync=false'
-        cmd = (
-            "gst-launch-1.0 "
-            "souphttpsrc location=\"{0}\" "
-            "extra-headers=\"extra-headers, X-Radiko-AuthToken=(string){2};\" "
-            "is-live=true "
-            "! hlsdemux ! audio/mpeg "
-            "! aacparse "
-            "! fdsink {1}"
-        ).format(url, fdsink_opt, token)
+            cmd = (
+                "gst-launch-1.0 "
+                "souphttpsrc location=\"{0}\" "
+                "extra-headers=\"extra-headers, X-Radiko-AuthToken=(string){1};\" "
+                "is-live=true "
+                "! hlsdemux "
+                "! audio/mpeg "
+                "! fdsink"
+            ).format(url, token)
         
         self.logger.debug('cmd: ' + cmd)
         proc = subprocess.Popen(
