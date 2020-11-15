@@ -6,12 +6,9 @@ class Station(models.Model):
     station_no = models.IntegerField()
     station_id = models.CharField(max_length=30,primary_key=True)
     name = models.CharField(max_length=100)
-#    ascii_name = models.CharField(max_length=100)
     area_id = models.CharField(max_length=4)
     area_name = models.CharField(max_length=30)
     region = models.CharField(max_length=30)
-#    areafree = models.CharField(max_length=1)
-#    timefree = models.CharField(max_length=1)
 
 class Program(models.Model):
     id = models.IntegerField(primary_key=True)
@@ -23,7 +20,7 @@ class Program(models.Model):
     desc = models.CharField(max_length=2000, null=True)
     info = models.CharField(max_length=2000, null=True)
     pfm = models.CharField(max_length=200, null=True)
-    prog_id = models.CharField(max_length=10)#, unique=True)
+    prog_id = models.CharField(max_length=10)
     ft = models.CharField(max_length=14)
     to = models.CharField(max_length=14)
     dur = models.CharField(max_length=14)

@@ -1,23 +1,19 @@
-from django.views import View
-from django.shortcuts import render
-from django.http import HttpResponse, StreamingHttpResponse
-from .models import Station, Program
-from django.shortcuts import render, redirect
-from django.utils.timezone import datetime, timedelta
-#from django.utils import timezone
-#from django.utils import html
-#from django.urls import reverse
+import logging
 import subprocess
 import re
 import json
-from . import radiko
-from .tasks import download_program, record_program
-from django.core import serializers
 
+from django.views import View
+from django.http import HttpResponse, StreamingHttpResponse
+from django.shortcuts import render, redirect
+from django.utils.timezone import datetime, timedelta
+from django.core import serializers
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-import logging
+from .models import Station, Program
+from . import radiko
+from .tasks import download_program, record_program
 
 from mpd import MPDClient
 

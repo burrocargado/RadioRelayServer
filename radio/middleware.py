@@ -12,7 +12,6 @@ class RadikoMiddleware:
 
     def __init__(self, get_response):
         self.get_response = get_response
-        #print('(1) init')
 
         playlist = {
             'url': settings.BASE_URL + '/radiko/stream/{}', 
@@ -40,11 +39,7 @@ class RadikoMiddleware:
         Station.objects.bulk_create(rec_n)
 
     def __call__(self, request):
-        #print('(2): before get_response')
-
         response = self.get_response(request)
-
-        #print('(3): after get_response')
 
         return response
 

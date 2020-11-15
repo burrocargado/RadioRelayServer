@@ -3,8 +3,6 @@ from django.conf import settings
 
 from .models import Station, Program
 from background_task import background
-#from background_task.models import Task
-#from background_task.models import Completed_Task
 from django.core import serializers
 from django.utils import timezone
 import logging
